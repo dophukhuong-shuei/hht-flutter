@@ -5,63 +5,69 @@ import '../../config/app_config.dart';
 import '../../config/theme_config.dart';
 import '../../routes/route_names.dart';
 import '../providers/auth_provider.dart';
+import '../providers/language_provider.dart';
+import '../../l10n/app_strings.dart';
 
 class MainMenuScreen extends StatelessWidget {
   const MainMenuScreen({Key? key}) : super(key: key);
 
-  List<MenuItem> get _menuItems => [
-    MenuItem(
-      id: 1,
-      title: '1. 入荷',
-      color: AppColors.menuColors[0],
-      route: RouteNames.warehouseReceipt,
-    ),
-    MenuItem(
-      id: 2,
-      title: '2. 棚上げ',
-      color: AppColors.menuColors[1],
-      route: '/putaway',
-    ),
-    MenuItem(
-      id: 3,
-      title: '3. ピッキング',
-      color: AppColors.menuColors[2],
-      route: '/picking',
-    ),
-    MenuItem(
-      id: 4,
-      title: '4. 事前セット',
-      color: AppColors.menuColors[3],
-      route: '/bundle',
-    ),
-    MenuItem(
-      id: 5,
-      title: '5. 棚移動',
-      color: AppColors.menuColors[4],
-      route: '/bin-movement',
-    ),
-    MenuItem(
-      id: 6,
-      title: '6. 棚卸',
-      color: AppColors.menuColors[5],
-      route: '/bin-audit',
-    ),
-    MenuItem(
-      id: 7,
-      title: '7. ログアウト',
-      color: AppColors.menuColors[6],
-      route: '/logout',
-    ),
-  ];
+  List<MenuItem> _getMenuItems(BuildContext context) {
+    final strings = AppStrings.of(context);
+    return [
+      MenuItem(
+        id: 1,
+        title: strings.menuItems[0],
+        color: AppColors.menuColors[0],
+        route: RouteNames.tenantSelection,
+      ),
+      MenuItem(
+        id: 2,
+        title: strings.menuItems[1],
+        color: AppColors.menuColors[1],
+        route: RouteNames.putawayList,
+      ),
+      MenuItem(
+        id: 3,
+        title: strings.menuItems[2],
+        color: AppColors.menuColors[2],
+        route: '${RouteNames.tenantSelection}?funcNumber=3',
+      ),
+      MenuItem(
+        id: 4,
+        title: strings.menuItems[3],
+        color: AppColors.menuColors[3],
+        route: RouteNames.bundleList,
+      ),
+      MenuItem(
+        id: 5,
+        title: strings.menuItems[4],
+        color: AppColors.menuColors[4],
+        route: '/bin-movement',
+      ),
+      MenuItem(
+        id: 6,
+        title: strings.menuItems[5],
+        color: AppColors.menuColors[5],
+        route: '/bin-audit',
+      ),
+      MenuItem(
+        id: 7,
+        title: strings.menuItems[6],
+        color: AppColors.menuColors[6],
+        route: '/logout',
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.lighter,
       appBar: AppBar(
-        title: const Text('メニュー'),
+        title: Text(AppStrings.of(context).menuTitle),
         backgroundColor: AppColors.headerColor,
         actions: [
+          _LanguageSelector(),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
@@ -87,9 +93,9 @@ class MainMenuScreen extends StatelessWidget {
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(10),
-        itemCount: _menuItems.length,
+        itemCount: _getMenuItems(context).length,
         itemBuilder: (context, index) {
-          final item = _menuItems[index];
+          final item = _getMenuItems(context)[index];
           return Container(
             margin: const EdgeInsets.only(bottom: 16),
             child: Material(
@@ -125,26 +131,28 @@ class MainMenuScreen extends StatelessWidget {
   }
 
   void _handleLogout(BuildContext context) {
+    final rootContext = context;
+    final router = GoRouter.of(rootContext);
+    final authProvider = Provider.of<AuthProvider>(rootContext, listen: false);
+
+    final strings = AppStrings.ofWithoutWatch(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('ログアウト'),
-        content: const Text('ログアウトしますか？'),
+        title: Text(strings.loginTitle),
+        content: Text('${strings.loginTitle}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('いいえ'),
+            child: Text(strings.no),
           ),
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              final authProvider = Provider.of<AuthProvider>(context, listen: false);
               await authProvider.logout();
-              if (context.mounted) {
-                context.go(RouteNames.login);
-              }
+              router.go(RouteNames.login);
             },
-            child: const Text('はい'),
+            child: Text(strings.yes),
           ),
         ],
       ),
@@ -166,3 +174,19 @@ class MenuItem {
   });
 }
 
+class _LanguageSelector extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<LanguageProvider>();
+    final current = provider.locale;
+    return PopupMenuButton<Locale>(
+      icon: const Icon(Icons.language, color: AppColors.black),
+      onSelected: provider.setLocale,
+      initialValue: current,
+      itemBuilder: (_) => const [
+        PopupMenuItem(value: Locale('en'), child: Text('English')),
+        PopupMenuItem(value: Locale('ja'), child: Text('日本語')),
+      ],
+    );
+  }
+}

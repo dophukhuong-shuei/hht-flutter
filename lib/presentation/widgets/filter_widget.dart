@@ -3,6 +3,7 @@ import 'custom_input.dart';
 import 'custom_dropdown.dart';
 import 'custom_button.dart';
 import '../../config/theme_config.dart';
+import '../../l10n/app_strings.dart';
 
 // Re-export DropdownItem for convenience
 export 'custom_dropdown.dart' show DropdownItem;
@@ -101,23 +102,25 @@ class _FilterWidgetState extends State<FilterWidget> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'フィルター',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.blackText,
-              ),
+            Builder(
+              builder: (context) {
+                final strings = AppStrings.of(context);
+                return Text(
+                  strings.filter,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.blackText,
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 16),
             Wrap(
               spacing: 16,
               runSpacing: 16,
               children: widget.fields.map((field) {
-                return SizedBox(
-                  width: 200,
-                  child: _buildField(field),
-                );
+                return SizedBox(width: 200, child: _buildField(field));
               }).toList(),
             ),
             const SizedBox(height: 16),
@@ -126,14 +129,14 @@ class _FilterWidgetState extends State<FilterWidget> {
               children: [
                 if (widget.showResetButton) ...[
                   CustomButton(
-                    text: 'リセット',
+                    text: AppStrings.of(context).reset,
                     type: ButtonType.outline,
                     onPressed: _handleReset,
                   ),
                   const SizedBox(width: 8),
                 ],
                 CustomButton(
-                  text: '検索',
+                  text: AppStrings.of(context).search,
                   type: ButtonType.primary,
                   onPressed: _handleFilter,
                 ),
@@ -189,4 +192,3 @@ class _FilterWidgetState extends State<FilterWidget> {
     }
   }
 }
-

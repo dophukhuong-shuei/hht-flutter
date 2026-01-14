@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
-  // Primary Colors
-  static const Color primary = Color(0xFF2196F3);
-  static const Color primaryLight = Color(0xFF64B5F6);
-  static const Color primaryDark = Color(0xFF1976D2);
-  static const Color lighter = Color(0xFFE3F2FD);
+  // Primary Colors - Pink (matching React Native)
+  static const Color primary = Color(0xFFc02941); // '#c02941'
+  static const Color primaryLight = Color(0xFFf05577); // '#f05577'
+  static const Color primaryDark = Color(0xFF8c0032); // '#8c0032'
+  static const Color lighter = Color(0xFFF3F3F3); // '#F3F3F3'
   
   // Accent Colors
   static const Color greenDark = Color(0xFF207868);
@@ -35,6 +35,16 @@ class AppColors {
     Color(0xFFac6363), // 棚卸
     Color(0xFFc3cfd9), // ログアウト
   ];
+
+  // Additional colors from React Native
+  static const Color orange_light = Color(0xFFfae6d8);
+  static const Color Settings_Colors_3 = Color(0xFFfd9627);
+  static const Color btn_red = Color(0xFFd3455b);
+  static const Color btn_blue = Color(0xFF2c88d9);
+  static const Color btn_brown = Color(0xFF8B4513);
+  static const Color borderTable = Color(0xFFc3cfd9);
+  static const Color text_warning = Color(0xFFFFA500);
+  static const Color text_placeholder = Color(0xFF666666);
 }
 
 class AppTheme {
@@ -42,7 +52,8 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.light(
-        primary: AppColors.primary,
+        primary: AppColors.primary, // Pink primary
+        primaryContainer: AppColors.primaryLight,
         secondary: AppColors.greenDark,
         error: AppColors.textError,
         surface: AppColors.white,
@@ -70,7 +81,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+          borderSide: const BorderSide(color: AppColors.primaryLight, width: 2), // Pink focus
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
@@ -82,7 +93,7 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.greenDark,
+          backgroundColor: AppColors.primaryLight, // Pink button
           foregroundColor: AppColors.white,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           shape: RoundedRectangleBorder(

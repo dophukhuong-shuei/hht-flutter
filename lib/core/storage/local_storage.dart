@@ -51,16 +51,16 @@ class LocalStorage {
     return _prefs.getString(key);
   }
 
-  // JSON operations
-  Future<void> saveJson(String key, Map<String, dynamic> data) async {
+  // JSON operations (accept Map or List)
+  Future<void> saveJson(String key, dynamic data) async {
     await _prefs.setString(key, jsonEncode(data));
   }
 
-  Future<Map<String, dynamic>?> getJson(String key) async {
+  Future<dynamic> getJson(String key) async {
     final data = _prefs.getString(key);
     if (data != null) {
       try {
-        return jsonDecode(data) as Map<String, dynamic>;
+        return jsonDecode(data);
       } catch (e) {
         return null;
       }

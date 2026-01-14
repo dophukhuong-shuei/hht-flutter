@@ -4,7 +4,6 @@ import 'dart:convert';
 import '../../config/app_config.dart';
 import 'api_endpoints.dart';
 import '../../data/models/auth/login_response.dart';
-import '../../data/repositories/auth_repository.dart';
 
 class ApiClient {
   late Dio _dio;

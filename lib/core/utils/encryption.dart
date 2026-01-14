@@ -13,7 +13,6 @@ String verifyMd5Hash(String encryptedData) {
     final decoded = utf8.decode(bytes);
     
     // Split by | to get username and password
-    // Note: Actual implementation may vary based on your encryption method
     return decoded;
   } catch (e) {
     throw Exception('Failed to decrypt QR data: $e');

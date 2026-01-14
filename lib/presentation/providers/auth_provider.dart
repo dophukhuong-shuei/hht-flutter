@@ -95,11 +95,21 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    await _authRepository.logout();
-    _isAuthenticated = false;
-    _currentUser = null;
-    _userName = null;
+    _isLoading = true;
     notifyListeners();
+
+    try {
+      // Clear stored token and all related data
+      await _authRepository.logout();
+    } catch (_) {
+      // Ignore storage errors on logout – we still want to force local state to logged-out
+    } finally {
+      _isAuthenticated = false;
+      _currentUser = null;
+      _userName = null;
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 }
 

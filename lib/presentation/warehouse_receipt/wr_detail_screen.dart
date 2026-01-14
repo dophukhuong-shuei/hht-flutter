@@ -1,187 +1,135 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+
+import '../../data/models/warehouse_receipt/receipt_line.dart';
+import '../../data/models/warehouse_receipt/receipt_order.dart';
+import '../providers/warehouse_receipt_provider.dart';
+import '../../l10n/app_strings.dart';
 import '../../config/theme_config.dart';
-import '../widgets/custom_button.dart';
-import '../widgets/data_table_widget.dart';
-import '../widgets/custom_input.dart';
-import '../widgets/image_upload_widget.dart';
+import '../../routes/route_names.dart';
+import 'package:go_router/go_router.dart';
 
-class WRDetailScreen extends StatefulWidget {
-  final String? id;
+class WRDetailsScreen extends StatefulWidget {
+  final ReceiptOrder receipt;
+  final int tenantId;
 
-  const WRDetailScreen({Key? key, this.id}) : super(key: key);
+  const WRDetailsScreen({
+    Key? key,
+    required this.receipt,
+    required this.tenantId,
+  }) : super(key: key);
 
   @override
-  State<WRDetailScreen> createState() => _WRDetailScreenState();
+  State<WRDetailsScreen> createState() => _WRDetailsScreenState();
 }
 
-class _WRDetailScreenState extends State<WRDetailScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _receiptNoController = TextEditingController();
+class _WRDetailsScreenState extends State<WRDetailsScreen> {
+  final TextEditingController _barcodeController = TextEditingController();
+  final TextEditingController _productNameController = TextEditingController();
+  final TextEditingController _orderQtyController = TextEditingController();
+  final TextEditingController _actualQtyController = TextEditingController();
+  final TextEditingController _lotNoController = TextEditingController();
+  final TextEditingController _expirationDateController = TextEditingController();
+
+  final FocusNode _barcodeFocus = FocusNode();
+  final FocusNode _actualQtyFocus = FocusNode();
+  final FocusNode _lotNoFocus = FocusNode();
+  final FocusNode _expirationDateFocus = FocusNode();
+
+  int _currentIndex = 0;
+  String _selectedStatus = '通常'; // 通常 (Normal), NG, 不足 (Shortage)
+  ReceiptLine? _currentLine;
+  List<ReceiptLine> _lines = [];
+  List<File> _capturedImages = [];
+  MobileScannerController? _scannerController;
+  String? _scanningField; // 'janCode', 'actualQty', 'lotNo'
 
   @override
   void initState() {
     super.initState();
-    if (widget.id != null) {
-      _loadData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadLines();
+    });
+  }
+
+  Future<void> _loadLines() async {
+    final provider = context.read<WarehouseReceiptProvider>();
+    setState(() {
+      _lines = provider.currentReceiptLines;
+      if (_lines.isNotEmpty) {
+        _currentLine = _lines[_currentIndex];
+        _updateFormFields();
+      }
+    });
+    _barcodeFocus.requestFocus();
+  }
+
+  void _updateFormFields() {
+    if (_currentLine != null) {
+      _productNameController.text = _currentLine!.productName ?? '';
+      _orderQtyController.text = _currentLine!.orderQty.toString();
+      _actualQtyController.text = _currentLine!.transQty?.toString() ?? '0';
+      _lotNoController.text = _currentLine!.lotNo ?? '';
+      _expirationDateController.text = _currentLine!.expirationDate ?? '';
+      
+      // Map status: 1=通常, 2=NG, 3=不足
+      if (_currentLine!.status == 1) {
+        _selectedStatus = '通常';
+      } else if (_currentLine!.status == 2) {
+        _selectedStatus = 'NG';
+      } else if (_currentLine!.status == 3) {
+        _selectedStatus = '不足';
+      }
     }
   }
 
-  void _loadData() {
-    // Load data based on id
-    _receiptNoController.text = 'WR${widget.id}';
+  Future<void> _handleBarcodeSubmit(String barcode) async {
+    if (barcode.isEmpty) return;
+    _barcodeController.clear();
+    _actualQtyFocus.requestFocus();
   }
 
-  @override
-  void dispose() {
-    _receiptNoController.dispose();
-    super.dispose();
-  }
+  void _startBarcodeScanner(String field) {
+    setState(() {
+      _scanningField = field;
+      _scannerController = MobileScannerController();
+    });
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.id != null ? '入荷詳細' : '新規入荷'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: _handleSave,
-          ),
-        ],
-      ),
-      body: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: SizedBox(
+          height: 400,
+          child: Stack(
             children: [
-              // Basic Information Card
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        '基本情報',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      CustomInput(
-                        label: '入荷番号',
-                        controller: _receiptNoController,
-                        readOnly: widget.id != null,
-                      ),
-                      const SizedBox(height: 16),
-                      CustomInput(
-                        label: '日付',
-                        readOnly: true,
-                        initialValue: '2025-01-01',
-                        suffixIcon: const Icon(Icons.calendar_today),
-                      ),
-                    ],
-                  ),
-                ),
+              MobileScanner(
+                controller: _scannerController,
+                onDetect: (capture) {
+                  final List<Barcode> barcodes = capture.barcodes;
+                  for (final barcode in barcodes) {
+                    if (barcode.rawValue != null) {
+                      _scannerController?.stop();
+                      Navigator.pop(context);
+                      _handleScannedData(barcode.rawValue!, field);
+                      break;
+                    }
+                  }
+                },
               ),
-              const SizedBox(height: 16),
-              // Items Table
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'アイテム一覧',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          CustomButton(
-                            text: '追加',
-                            type: ButtonType.primary,
-                            onPressed: () {
-                              // Add item
-                            },
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      DataTableWidget(
-                        columns: const [
-                          DataTableColumn(label: '商品コード', width: 150),
-                          DataTableColumn(label: '商品名', width: 200),
-                          DataTableColumn(label: '数量', width: 100),
-                          DataTableColumn(label: '操作', width: 100),
-                        ],
-                        rows: [
-                          [
-                            const Text('P001'),
-                            const Text('商品名1'),
-                            const Text('10'),
-                            IconButton(
-                              icon: Icon(Icons.delete),
-                              onPressed: null,
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
+              Positioned(
+                top: 16,
+                right: 16,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () {
+                    _scannerController?.stop();
+                    Navigator.pop(context);
+                  },
                 ),
-              ),
-              const SizedBox(height: 16),
-              // Image Upload
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        '画像',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      ImageUploadWidget(
-                        label: '商品画像',
-                        onImageSelected: (file) {
-                          // Handle image selection
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              // Action Buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  CustomButton(
-                    text: 'キャンセル',
-                    type: ButtonType.outline,
-                    onPressed: () => context.pop(),
-                  ),
-                  const SizedBox(width: 16),
-                  CustomButton(
-                    text: '保存',
-                    type: ButtonType.success,
-                    onPressed: _handleSave,
-                  ),
-                ],
               ),
             ],
           ),
@@ -190,14 +138,679 @@ class _WRDetailScreenState extends State<WRDetailScreen> {
     );
   }
 
-  void _handleSave() {
-    if (_formKey.currentState!.validate()) {
-      // Save logic
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('保存しました')),
-      );
-      context.pop();
+  void _handleScannedData(String scannedData, String field) {
+    setState(() {
+      if (field == 'janCode') {
+        _barcodeController.text = scannedData;
+      } else if (field == 'actualQty') {
+        _actualQtyController.text = scannedData;
+      } else if (field == 'lotNo') {
+        _lotNoController.text = scannedData;
+      }
+      _scanningField = null;
+    });
+  }
+
+  Future<void> _selectExpirationDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2100),
+    );
+
+    if (picked != null) {
+      setState(() {
+        _expirationDateController.text =
+            DateFormat('yyyy-MM-dd').format(picked);
+      });
     }
   }
-}
 
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.camera);
+    
+    if (image != null) {
+      setState(() {
+        _capturedImages.add(File(image.path));
+      });
+    }
+  }
+
+  void _handlePrevious() {
+    if (_currentIndex > 0) {
+      setState(() {
+        _currentIndex--;
+        _currentLine = _lines[_currentIndex];
+        _updateFormFields();
+      });
+      _barcodeFocus.requestFocus();
+    }
+  }
+
+  void _handleNext() {
+    if (_currentIndex < _lines.length - 1) {
+      setState(() {
+        _currentIndex++;
+        _currentLine = _lines[_currentIndex];
+        _updateFormFields();
+      });
+      _barcodeFocus.requestFocus();
+    }
+  }
+
+  Future<void> _handleSave() async {
+    if (_currentLine == null) return;
+
+    // Validate required fields
+    if (_actualQtyController.text.isEmpty) {
+      final strings = AppStrings.ofWithoutWatch(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(strings.actualQtyRequired),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    int statusValue = 1; // Default to 通常
+    if (_selectedStatus == 'NG') {
+      statusValue = 2;
+    } else if (_selectedStatus == '不足') {
+      statusValue = 3;
+    }
+
+    _currentLine = _currentLine!.copyWith(
+      transQty: double.tryParse(_actualQtyController.text),
+      lotNo: _lotNoController.text,
+      expirationDate: _expirationDateController.text,
+      status: statusValue,
+    );
+
+    final strings = AppStrings.ofWithoutWatch(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(strings.saved),
+        backgroundColor: Colors.green,
+      ),
+    );
+
+    // Move to next line if available
+    if (_currentIndex < _lines.length - 1) {
+      _handleNext();
+    }
+  }
+
+  void _handleBackToList() {
+    final company = Uri.encodeComponent(widget.receipt.supplierName ?? '');
+    context.go(
+      '${RouteNames.warehouseReceiptList}?tenantId=${widget.tenantId}&company=$company',
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.lighter,
+      body: _lines.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset(
+                    'assets/images/logo_1.png',
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.contain,
+                  ),
+                  const SizedBox(height: 20),
+                  const CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryLight),
+                  ),
+                ],
+              ),
+            )
+          : Column(
+              children: [
+                // Receipt Number Header
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.borderTable,
+                    border: Border(
+                      bottom: BorderSide(color: AppColors.borderTable, width: 1),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(
+                        '入荷番号:',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontFamily: 'MSPGothic',
+                          color: AppColors.black,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        widget.receipt.receiptNo,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontFamily: 'MSPGothic',
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.black,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Form Content
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // JANコード (JAN Code)
+                        _buildFieldWithBarcode(
+                          label: 'JANコード',
+                          controller: _barcodeController,
+                          focusNode: _barcodeFocus,
+                          hintText: '',
+                          onSubmitted: _handleBarcodeSubmit,
+                          onBarcodeTap: () => _startBarcodeScanner('janCode'),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // 商品 (Product) - Dropdown
+                        _buildProductDropdown(),
+                        const SizedBox(height: 16),
+
+                        // 予定数量 (Scheduled Quantity) - Read-only
+                        _buildReadOnlyField(
+                          label: '予定数量',
+                          controller: _orderQtyController,
+                          icon: Icons.shopping_cart,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // 実際数量 (Actual Quantity)
+                        _buildFieldWithBarcode(
+                          label: '実際数量',
+                          controller: _actualQtyController,
+                          focusNode: _actualQtyFocus,
+                          hintText: '0',
+                          keyboardType: TextInputType.number,
+                          onBarcodeTap: () => _startBarcodeScanner('actualQty'),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // 賞味期限 (Expiration Date)
+                        _buildDateField(),
+                        const SizedBox(height: 16),
+
+                        // ロット (Lot)
+                        _buildFieldWithBarcode(
+                          label: 'ロット',
+                          controller: _lotNoController,
+                          focusNode: _lotNoFocus,
+                          hintText: '',
+                          onBarcodeTap: () => _startBarcodeScanner('lotNo'),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // 状態 (Status) - Dropdown
+                        _buildStatusDropdown(),
+                        const SizedBox(height: 24),
+
+                        // 商品写真撮り (Take Product Photo)
+                        InkWell(
+                          onTap: _pickImage,
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              border: Border.all(color: Colors.blue.shade200),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.camera_alt, color: Colors.blue),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '商品写真撮り:',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.blue.shade700,
+                                    fontFamily: 'MSPGothic',
+                                  ),
+                                ),
+                                if (_capturedImages.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 8),
+                                    child: Text(
+                                      '${_capturedImages.length} 枚',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.blue.shade700,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        if (_capturedImages.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            height: 100,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: _capturedImages.length,
+                              itemBuilder: (context, index) {
+                                return Stack(
+                                  children: [
+                                    Container(
+                                      margin: const EdgeInsets.only(right: 8),
+                                      width: 100,
+                                      height: 100,
+                                      decoration: BoxDecoration(
+                                        border: Border.all(color: Colors.grey),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Image.file(
+                                        _capturedImages[index],
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                    Positioned(
+                                      top: 0,
+                                      right: 0,
+                                      child: IconButton(
+                                        icon: const Icon(Icons.close, color: Colors.red),
+                                        onPressed: () {
+                                          setState(() {
+                                            _capturedImages.removeAt(index);
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Bottom Navigation Bar
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border(
+                      top: BorderSide(color: AppColors.borderTable, width: 1),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      // 入荷一覧 (Receipt List) - Red button
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _handleBackToList,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.btn_red,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            '入荷一覧',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontFamily: 'MSPGothic',
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Left Arrow
+                      SizedBox(
+                        width: 60,
+                        child: ElevatedButton(
+                          onPressed: _currentIndex > 0 ? _handlePrevious : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _currentIndex > 0
+                                ? AppColors.gray
+                                : Colors.grey.shade300,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.all(12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Icon(Icons.arrow_back),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Right Arrow
+                      SizedBox(
+                        width: 60,
+                        child: ElevatedButton(
+                          onPressed: _currentIndex < _lines.length - 1
+                              ? _handleNext
+                              : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _currentIndex < _lines.length - 1
+                                ? AppColors.gray
+                                : Colors.grey.shade300,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.all(12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Icon(Icons.arrow_forward),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // 保存 (Save) - Green button
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _handleSave,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.btnGreen,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            '保存',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontFamily: 'MSPGothic',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildFieldWithBarcode({
+    required String label,
+    required TextEditingController controller,
+    FocusNode? focusNode,
+    String? hintText,
+    TextInputType? keyboardType,
+    VoidCallback? onBarcodeTap,
+    ValueChanged<String>? onSubmitted,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontFamily: 'MSPGothic',
+            color: AppColors.black,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: controller,
+                focusNode: focusNode,
+                keyboardType: keyboardType,
+                decoration: InputDecoration(
+                  hintText: hintText,
+                  border: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.headerColor, width: 2),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.headerColor, width: 2),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.primaryLight, width: 2),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                onSubmitted: onSubmitted,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.headerColor, width: 2),
+                color: Colors.white,
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.qr_code_scanner),
+                onPressed: onBarcodeTap,
+                color: AppColors.blackText,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProductDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '商品',
+          style: TextStyle(
+            fontSize: 14,
+            fontFamily: 'MSPGothic',
+            color: AppColors.black,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.headerColor, width: 2),
+            color: AppColors.headerColor,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: DropdownButton<String>(
+            value: _productNameController.text.isNotEmpty
+                ? _productNameController.text
+                : null,
+            isExpanded: true,
+            underline: const SizedBox(),
+            hint: Text(
+              '商品を選択',
+              style: TextStyle(
+                color: AppColors.textPlaceholder,
+                fontFamily: 'MSPGothic',
+              ),
+            ),
+            items: _lines.map((line) {
+              return DropdownMenuItem<String>(
+                value: line.productName ?? '',
+                child: Text(
+                  line.productName ?? '',
+                  style: const TextStyle(fontFamily: 'MSPGothic'),
+                ),
+              );
+            }).toList(),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() {
+                  _productNameController.text = value;
+                  final selectedLine = _lines.firstWhere(
+                    (line) => line.productName == value,
+                    orElse: () => _lines[_currentIndex],
+                  );
+                  _currentLine = selectedLine;
+                  _currentIndex = _lines.indexOf(selectedLine);
+                  _updateFormFields();
+                });
+              }
+            },
+            icon: const Icon(Icons.arrow_drop_down),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReadOnlyField({
+    required String label,
+    required TextEditingController controller,
+    IconData? icon,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontFamily: 'MSPGothic',
+            color: AppColors.black,
+          ),
+        ),
+        const SizedBox(height: 4),
+        TextField(
+          controller: controller,
+          readOnly: true,
+          decoration: InputDecoration(
+            border: OutlineInputBorder(
+              borderSide: BorderSide(color: AppColors.headerColor, width: 2),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: AppColors.headerColor, width: 2),
+            ),
+            filled: true,
+            fillColor: AppColors.headerColor,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            prefixIcon: icon != null ? Icon(icon) : null,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDateField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '賞味期限',
+          style: TextStyle(
+            fontSize: 14,
+            fontFamily: 'MSPGothic',
+            color: AppColors.black,
+          ),
+        ),
+        const SizedBox(height: 4),
+        TextField(
+          controller: _expirationDateController,
+          focusNode: _expirationDateFocus,
+          readOnly: true,
+          decoration: InputDecoration(
+            hintText: 'YYYY-MM-DD',
+            border: OutlineInputBorder(
+              borderSide: BorderSide(color: AppColors.headerColor, width: 2),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: AppColors.headerColor, width: 2),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: AppColors.primaryLight, width: 2),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            prefixIcon: const Icon(Icons.calendar_today),
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.calendar_month),
+              onPressed: _selectExpirationDate,
+            ),
+          ),
+          onTap: _selectExpirationDate,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '状態',
+          style: TextStyle(
+            fontSize: 14,
+            fontFamily: 'MSPGothic',
+            color: AppColors.black,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.headerColor, width: 2),
+            color: AppColors.headerColor,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: DropdownButton<String>(
+            value: _selectedStatus,
+            isExpanded: true,
+            underline: const SizedBox(),
+            items: const [
+              DropdownMenuItem(value: '通常', child: Text('通常', style: TextStyle(fontFamily: 'MSPGothic'))),
+              DropdownMenuItem(value: 'NG', child: Text('NG', style: TextStyle(fontFamily: 'MSPGothic'))),
+              DropdownMenuItem(value: '不足', child: Text('不足', style: TextStyle(fontFamily: 'MSPGothic'))),
+            ],
+            onChanged: (value) {
+              if (value != null) {
+                setState(() {
+                  _selectedStatus = value;
+                });
+              }
+            },
+            icon: const Icon(Icons.arrow_drop_down),
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  void dispose() {
+    _barcodeController.dispose();
+    _productNameController.dispose();
+    _orderQtyController.dispose();
+    _actualQtyController.dispose();
+    _lotNoController.dispose();
+    _expirationDateController.dispose();
+    _barcodeFocus.dispose();
+    _actualQtyFocus.dispose();
+    _lotNoFocus.dispose();
+    _expirationDateFocus.dispose();
+    _scannerController?.dispose();
+    super.dispose();
+  }
+}

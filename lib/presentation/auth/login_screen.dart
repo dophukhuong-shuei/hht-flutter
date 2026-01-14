@@ -9,6 +9,7 @@ import '../providers/auth_provider.dart';
 import '../../routes/route_names.dart';
 import '../../core/utils/connectivity_check.dart';
 import '../../core/utils/encryption.dart';
+import '../../l10n/app_strings.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -37,13 +38,13 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Check connectivity
+    final strings = AppStrings.ofWithoutWatch(context);
     final isConnected = await ConnectivityCheck.isConnected();
     if (!isConnected) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('インターネット接続無し'),
+          SnackBar(
+            content: Text(strings.loginNoInternet),
             backgroundColor: AppColors.textError,
           ),
         );
@@ -64,8 +65,8 @@ class _LoginScreenState extends State<LoginScreen> {
           context.go(RouteNames.mainMenu);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('ユーザー名 または パスワードが正しくありません。入力内容を確認し再度ログインしてください。'),
+            SnackBar(
+              content: Text(strings.loginWrongCredential),
               backgroundColor: AppColors.textError,
             ),
           );
@@ -73,9 +74,9 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
-        String message = 'ログインに失敗しました';
+        String message = strings.loginFailed;
         if (e.toString().contains('WMSサーバに接続できません')) {
-          message = 'WMSに問題が発生してるため、WMSサーバに接続できません';
+          message = strings.loginServerIssue;
         }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -93,11 +94,12 @@ class _LoginScreenState extends State<LoginScreen> {
       final decryptedData = verifyMd5Hash(scannedData);
       final parts = decryptedData.split('|');
       
+      final strings = AppStrings.ofWithoutWatch(context);
       if (parts.length < 2) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('ユーザーとパスワードを入力してください'),
+            SnackBar(
+              content: Text(strings.qrInvalid),
               backgroundColor: AppColors.textError,
             ),
           );
@@ -111,8 +113,8 @@ class _LoginScreenState extends State<LoginScreen> {
       if (userName.isEmpty || password.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('ユーザーとパスワードを入力してください'),
+            SnackBar(
+              content: Text(strings.qrInvalid),
               backgroundColor: AppColors.textError,
             ),
           );
@@ -120,16 +122,15 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      // Check connectivity
       final isConnected = await ConnectivityCheck.isConnected();
       if (!isConnected) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('インターネット接続無し'),
-              backgroundColor: AppColors.textError,
-            ),
-          );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(strings.loginNoInternet),
+            backgroundColor: AppColors.textError,
+          ),
+        );
         }
         return;
       }
@@ -143,8 +144,8 @@ class _LoginScreenState extends State<LoginScreen> {
           context.go(RouteNames.mainMenu);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('ユーザー名 または パスワードが正しくありません。入力内容を確認し再度ログインしてください。'),
+            SnackBar(
+              content: Text(strings.loginWrongCredential),
               backgroundColor: AppColors.textError,
             ),
           );
@@ -152,9 +153,10 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
-        String message = 'QRログインに失敗しました';
+        final strings = AppStrings.ofWithoutWatch(context);
+        String message = strings.loginFailed;
         if (e.toString().contains('WMSサーバに接続できません')) {
-          message = 'WMSに問題が発生してるため、WMSサーバに接続できません';
+          message = strings.loginServerIssue;
         }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -225,7 +227,23 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: AppColors.white,
       body: SafeArea(
         child: authProvider.isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset(
+                      'assets/images/logo_1.png',
+                      width: 150,
+                      height: 150,
+                      fit: BoxFit.contain,
+                    ),
+                    const SizedBox(height: 20),
+                    const CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryLight),
+                    ),
+                  ],
+                ),
+              )
             : SingleChildScrollView(
                 child: Padding(
                   padding: const EdgeInsets.all(24.0),
@@ -235,91 +253,88 @@ class _LoginScreenState extends State<LoginScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const SizedBox(height: 60),
-                        // Logo placeholder
-                        Container(
-                          height: 150,
-                          width: 150,
-                          decoration: BoxDecoration(
-                            color: AppColors.lighter,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.inventory_2,
-                            size: 80,
-                            color: AppColors.primary,
-                          ),
+                        // Logo
+                        Image.asset(
+                          'assets/images/logo_1.png',
+                          width: 200,
+                          height: 200,
+                          fit: BoxFit.contain,
                         ),
-                        const SizedBox(height: 60),
-                        // Username
-                        CustomInput(
-                          label: 'ユーザー名',
-                          controller: _usernameController,
-                          validator: (value) {
-                            if (value == null || value.length < 4) {
-                              return 'Username must be 4 characters long';
-                            }
-                            return null;
+                        const SizedBox(height: 40),
+                        Builder(
+                          builder: (context) {
+                            final strings = AppStrings.of(context);
+                            return Column(
+                              children: [
+                                CustomInput(
+                                  label: strings.userName,
+                                  controller: _usernameController,
+                                  validator: (value) {
+                                    if (value == null || value.length < 4) {
+                                      return 'Username must be 4 characters long';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                                CustomInput(
+                                  label: strings.password,
+                                  controller: _passwordController,
+                                  obscureText: _obscurePassword,
+                                  validator: (value) {
+                                    if (value == null || value.length < 3) {
+                                      return 'Password must be 8 characters long';
+                                    }
+                                    return null;
+                                  },
+                                  onSubmitted: (_) => _handleLogin(),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility
+                                          : Icons.visibility_off,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscurePassword = !_obscurePassword;
+                                      });
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(height: 32),
+                                CustomButton(
+                                  text: strings.loginButton,
+                                  type: ButtonType.success,
+                                  isFullWidth: true,
+                                  onPressed: _handleLogin,
+                                  isLoading: authProvider.isLoading,
+                                ),
+                                const SizedBox(height: 16),
+                                CustomButton(
+                                  text: strings.qrLogin,
+                                  type: ButtonType.outline,
+                                  isFullWidth: true,
+                                  icon: Icons.qr_code_scanner,
+                                  onPressed: _startQRScanner,
+                                ),
+                                const SizedBox(height: 24),
+                                Text(
+                                  strings.loginHint,
+                                  style: const TextStyle(
+                                    color: AppColors.primaryDark,
+                                    fontSize: 14,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            );
                           },
-                        ),
-                        const SizedBox(height: 16),
-                        // Password
-                        CustomInput(
-                          label: 'パスワード',
-                          controller: _passwordController,
-                          obscureText: _obscurePassword,
-                          validator: (value) {
-                            if (value == null || value.length < 3) {
-                              return 'Password must be 8 characters long';
-                            }
-                            return null;
-                          },
-                          onSubmitted: (_) => _handleLogin(),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility
-                                  : Icons.visibility_off,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _obscurePassword = !_obscurePassword;
-                              });
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                        // Login Button
-                        CustomButton(
-                          text: 'ログイン',
-                          type: ButtonType.success,
-                          isFullWidth: true,
-                          onPressed: _handleLogin,
-                          isLoading: authProvider.isLoading,
-                        ),
-                        const SizedBox(height: 16),
-                        // QR Scan Button
-                        CustomButton(
-                          text: 'QRコードスキャン',
-                          type: ButtonType.outline,
-                          isFullWidth: true,
-                          icon: Icons.qr_code_scanner,
-                          onPressed: _startQRScanner,
-                        ),
-                        const SizedBox(height: 24),
-                        // QR Login hint
-                        Text(
-                          '※ユーザーとパスワード入力、またはQRコードスキャンでログイン',
-                          style: TextStyle(
-                            color: AppColors.primaryDark,
-                            fontSize: 14,
-                          ),
-                          textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 40),
                         // Version
                         Text(
                           '${AppConfig.env} V${AppConfig.version}',
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppColors.primaryDark,
                             fontSize: 12,
                           ),

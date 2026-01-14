@@ -46,7 +46,7 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('画像の選択に失敗しました: $e')),
+        SnackBar(content: Text('Failed to select image: $e')),
       );
     }
   }
@@ -59,7 +59,7 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
           children: [
             ListTile(
               leading: const Icon(Icons.photo_library),
-              title: const Text('ギャラリーから選択'),
+              title: const Text('Choose from gallery'),
               onTap: () {
                 Navigator.pop(context);
                 _pickImage(ImageSource.gallery);
@@ -67,7 +67,7 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
             ),
             ListTile(
               leading: const Icon(Icons.camera_alt),
-              title: const Text('カメラで撮影'),
+              title: const Text('Take a photo'),
               onTap: () {
                 Navigator.pop(context);
                 _pickImage(ImageSource.camera);
@@ -76,7 +76,7 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
             if (_selectedImage != null)
               ListTile(
                 leading: const Icon(Icons.delete),
-                title: const Text('削除'),
+                title: const Text('Remove'),
                 onTap: () {
                   setState(() {
                     _selectedImage = null;
@@ -147,7 +147,7 @@ class _ImageUploadWidgetState extends State<ImageUploadWidget> {
                       ),
                       SizedBox(height: 8),
                       Text(
-                        '画像を選択',
+                        'Select image',
                         style: TextStyle(
                           color: AppColors.textPlaceholder,
                           fontSize: 14,

@@ -1,17 +1,21 @@
 class RouteNames {
   static const String login = '/login';
   static const String mainMenu = '/main-menu';
+  static const String tenantSelection = '/tenant-selection';
   static const String warehouseReceipt = '/warehouse-receipt';
   static const String warehouseReceiptList = '/warehouse-receipt/list';
   static const String warehouseReceiptDetail = '/warehouse-receipt/detail';
+  static const String warehouseReceiptFilter = '/warehouse-receipt/filter';
   static const String putaway = '/putaway';
   static const String putawayList = '/putaway/list';
   static const String putawayDetail = '/putaway/detail';
   static const String picking = '/picking';
   static const String pickingList = '/picking/list';
+  static const String pickingItems = '/picking/items';
   static const String pickingDetail = '/picking/detail';
   static const String bundle = '/bundle';
   static const String bundleList = '/bundle/list';
+  static const String bundleItems = '/bundle/items';
   static const String bundleDetail = '/bundle/detail';
   static const String binMovement = '/bin-movement';
   static const String binMovementList = '/bin-movement/list';
