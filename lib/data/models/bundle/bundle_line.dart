@@ -1,4 +1,6 @@
+
 import '../../../core/utils/json_utils.dart';
+part 'bundle_line.g.dart';
 
 class BundleLine {
   final String? id;

@@ -1,8 +1,9 @@
+import '../presentation/stocktake/stocktake_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../presentation/auth/login_screen.dart';
-import '../presentation/dashboard/main_menu_screen.dart';
+import '../presentation/main/login_screen.dart';
+import '../presentation/main/main_menu_screen.dart';
 import '../presentation/tenant_selection/tenant_selection_screen.dart';
 import '../presentation/warehouse_receipt/wr_list_screen.dart';
 import '../presentation/warehouse_receipt/wr_detail_screen.dart';
@@ -182,6 +183,10 @@ final appRouter = GoRouter(
         );
       },
     ),
+      GoRoute(
+        path: RouteNames.stocktake,
+        builder: (context, state) => const StocktakeScreen(),
+      ),
     // Add other routes as needed...
   ],
 );

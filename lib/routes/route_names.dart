@@ -1,6 +1,7 @@
 class RouteNames {
   static const String login = '/login';
   static const String mainMenu = '/main-menu';
+    static const String stocktake = '/stocktake';
   static const String tenantSelection = '/tenant-selection';
   static const String warehouseReceipt = '/warehouse-receipt';
   static const String warehouseReceiptList = '/warehouse-receipt/list';
