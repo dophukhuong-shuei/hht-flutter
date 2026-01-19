@@ -33,7 +33,8 @@ class _WRDetailsScreenState extends State<WRDetailsScreen> {
   final TextEditingController _orderQtyController = TextEditingController();
   final TextEditingController _actualQtyController = TextEditingController();
   final TextEditingController _lotNoController = TextEditingController();
-  final TextEditingController _expirationDateController = TextEditingController();
+  final TextEditingController _expirationDateController =
+      TextEditingController();
 
   final FocusNode _barcodeFocus = FocusNode();
   final FocusNode _actualQtyFocus = FocusNode();
@@ -75,7 +76,7 @@ class _WRDetailsScreenState extends State<WRDetailsScreen> {
       _actualQtyController.text = _currentLine!.transQty?.toString() ?? '0';
       _lotNoController.text = _currentLine!.lotNo ?? '';
       _expirationDateController.text = _currentLine!.expirationDate ?? '';
-      
+
       // Map status: 1=通常, 2=NG, 3=不足
       if (_currentLine!.status == 1) {
         _selectedStatus = '通常';
@@ -161,8 +162,9 @@ class _WRDetailsScreenState extends State<WRDetailsScreen> {
 
     if (picked != null) {
       setState(() {
-        _expirationDateController.text =
-            DateFormat('yyyy-MM-dd').format(picked);
+        _expirationDateController.text = DateFormat(
+          'yyyy-MM-dd',
+        ).format(picked);
       });
     }
   }
@@ -170,7 +172,7 @@ class _WRDetailsScreenState extends State<WRDetailsScreen> {
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.camera);
-    
+
     if (image != null) {
       setState(() {
         _capturedImages.add(File(image.path));
@@ -230,10 +232,7 @@ class _WRDetailsScreenState extends State<WRDetailsScreen> {
 
     final strings = AppStrings.ofWithoutWatch(context);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(strings.saved),
-        backgroundColor: Colors.green,
-      ),
+      SnackBar(content: Text(strings.saved), backgroundColor: Colors.green),
     );
 
     // Move to next line if available
@@ -266,7 +265,9 @@ class _WRDetailsScreenState extends State<WRDetailsScreen> {
                   ),
                   const SizedBox(height: 20),
                   const CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryLight),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppColors.primaryLight,
+                    ),
                   ),
                 ],
               ),
@@ -275,11 +276,17 @@ class _WRDetailsScreenState extends State<WRDetailsScreen> {
               children: [
                 // Receipt Number Header
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.borderTable,
                     border: Border(
-                      bottom: BorderSide(color: AppColors.borderTable, width: 1),
+                      bottom: BorderSide(
+                        color: AppColors.borderTable,
+                        width: 1,
+                      ),
                     ),
                   ),
                   child: Row(
@@ -377,7 +384,10 @@ class _WRDetailsScreenState extends State<WRDetailsScreen> {
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.camera_alt, color: Colors.blue),
+                                const Icon(
+                                  Icons.camera_alt,
+                                  color: Colors.blue,
+                                ),
                                 const SizedBox(width: 8),
                                 Text(
                                   '商品写真撮り:',
@@ -429,7 +439,10 @@ class _WRDetailsScreenState extends State<WRDetailsScreen> {
                                       top: 0,
                                       right: 0,
                                       child: IconButton(
-                                        icon: const Icon(Icons.close, color: Colors.red),
+                                        icon: const Icon(
+                                          Icons.close,
+                                          color: Colors.red,
+                                        ),
                                         onPressed: () {
                                           setState(() {
                                             _capturedImages.removeAt(index);
@@ -581,15 +594,27 @@ class _WRDetailsScreenState extends State<WRDetailsScreen> {
                 decoration: InputDecoration(
                   hintText: hintText,
                   border: OutlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.headerColor, width: 2),
+                    borderSide: BorderSide(
+                      color: AppColors.headerColor,
+                      width: 2,
+                    ),
                   ),
                   enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.headerColor, width: 2),
+                    borderSide: BorderSide(
+                      color: AppColors.headerColor,
+                      width: 2,
+                    ),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.primaryLight, width: 2),
+                    borderSide: BorderSide(
+                      color: AppColors.primaryLight,
+                      width: 2,
+                    ),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                 ),
                 onSubmitted: onSubmitted,
               ),
@@ -706,7 +731,10 @@ class _WRDetailsScreenState extends State<WRDetailsScreen> {
             ),
             filled: true,
             fillColor: AppColors.headerColor,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 8,
+            ),
             prefixIcon: icon != null ? Icon(icon) : null,
           ),
         ),
@@ -742,7 +770,10 @@ class _WRDetailsScreenState extends State<WRDetailsScreen> {
             focusedBorder: OutlineInputBorder(
               borderSide: BorderSide(color: AppColors.primaryLight, width: 2),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 8,
+            ),
             prefixIcon: const Icon(Icons.calendar_today),
             suffixIcon: IconButton(
               icon: const Icon(Icons.calendar_month),
@@ -780,9 +811,18 @@ class _WRDetailsScreenState extends State<WRDetailsScreen> {
             isExpanded: true,
             underline: const SizedBox(),
             items: const [
-              DropdownMenuItem(value: '通常', child: Text('通常', style: TextStyle(fontFamily: 'MSPGothic'))),
-              DropdownMenuItem(value: 'NG', child: Text('NG', style: TextStyle(fontFamily: 'MSPGothic'))),
-              DropdownMenuItem(value: '不足', child: Text('不足', style: TextStyle(fontFamily: 'MSPGothic'))),
+              DropdownMenuItem(
+                value: '通常',
+                child: Text('通常', style: TextStyle(fontFamily: 'MSPGothic')),
+              ),
+              DropdownMenuItem(
+                value: 'NG',
+                child: Text('NG', style: TextStyle(fontFamily: 'MSPGothic')),
+              ),
+              DropdownMenuItem(
+                value: '不足',
+                child: Text('不足', style: TextStyle(fontFamily: 'MSPGothic')),
+              ),
             ],
             onChanged: (value) {
               if (value != null) {
