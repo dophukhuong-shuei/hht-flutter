@@ -10,12 +10,12 @@ import 'data/repositories/warehouse_receipt_repository.dart';
 import 'data/repositories/putaway_repository.dart';
 import 'data/repositories/picking_repository.dart';
 import 'data/repositories/bundle_repository.dart';
-import 'presentation/providers/auth_provider.dart';
-import 'presentation/providers/warehouse_receipt_provider.dart';
-import 'presentation/providers/putaway_provider.dart';
-import 'presentation/providers/picking_provider.dart';
-import 'presentation/providers/bundle_provider.dart';
-import 'presentation/providers/language_provider.dart';
+import 'Screens/providers/auth_provider.dart';
+import 'Screens/providers/warehouse_receipt_provider.dart';
+import 'Screens/providers/putaway_provider.dart';
+import 'Screens/providers/picking_provider.dart';
+import 'Screens/providers/bundle_provider.dart';
+import 'Screens/providers/language_provider.dart';
 import 'routes/app_router.dart';
 
 void main() async {

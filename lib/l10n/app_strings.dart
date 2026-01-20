@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../presentation/providers/language_provider.dart';
+import '../Screens/providers/language_provider.dart';
 import 'strings_en.dart';
 import 'strings_ja.dart';
 
