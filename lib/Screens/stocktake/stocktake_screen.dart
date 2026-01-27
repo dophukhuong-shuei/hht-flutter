@@ -1,0 +1,259 @@
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../core/network/api_client.dart';
+import '../../data/models/stocktake/invent_stocktake_recording.dart';
+import '../../data/repositories/stocktake_repository.dart';
+import 'stocktake_detail_screen.dart';
+
+class StocktakeScreen extends StatefulWidget {
+  const StocktakeScreen({super.key});
+
+  @override
+  State<StocktakeScreen> createState() => _StocktakeScreenState();
+}
+
+
+class _StocktakeScreenState extends State<StocktakeScreen> {
+  bool _loading = true;
+  String? _error;
+  List<InventStockTakeRecording> _items = [];
+  String _query = '';
+  bool _sortDescending = true;
+  late StocktakeRepository _repository;
+
+  @override
+  void initState() {
+    super.initState();
+    final apiClient = Provider.of<ApiClient>(context, listen: false);
+    _repository = StocktakeRepository(apiClient);
+    _fetch();
+  }
+
+  Future<void> _fetch() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final models = await _repository.fetchStocktakeRecording();
+      if (mounted) {
+        setState(() {
+          _items = models;
+        });
+        _applySort();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = 'Connection error: $e';
+          _items = [];
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
+  // ...existing code...
+
+  List<InventStockTakeRecording> get _filteredItems {
+    if (_query.trim().isEmpty) return _items;
+    final q = _query.toLowerCase();
+    return _items.where((it) {
+      final join =
+          '${it.stockTakeNo ?? ''} ${it.location ?? ''} ${it.personInCharge ?? ''} ${it.remarks ?? ''} ${it.status ?? ''} ${it.recordNo ?? ''}'
+              .toLowerCase();
+      return join.contains(q);
+    }).toList();
+  }
+
+  String _primaryText(InventStockTakeRecording it) {
+    final no = it.stockTakeNo ?? 'No';
+    final rec = it.recordNo != null ? ' #${it.recordNo}' : '';
+    return '$no$rec';
+  }
+
+  String _secondaryText(InventStockTakeRecording it) {
+    if (it.transactionDate != null) {
+      return it.transactionDate!.toIso8601String();
+    }
+    if (it.personInCharge != null && it.personInCharge!.isNotEmpty) {
+      return it.personInCharge!;
+    }
+    return it.location ?? '';
+  }
+
+  bool _isStatusZero(InventStockTakeRecording it) {
+    final s = it.status;
+    if (s == null) return false;
+    if (s == '0') return true;
+    final n = int.tryParse(s);
+    return n == 0;
+  }
+
+  void _applySort() {
+    setState(() {
+      _items.sort((a, b) {
+        final aStr = a.stockTakeNo ?? '';
+        final bStr = b.stockTakeNo ?? '';
+        final aNum = _extractLastNumber(aStr);
+        final bNum = _extractLastNumber(bStr);
+        int cmp;
+        if (aNum != null && bNum != null) {
+          cmp = aNum.compareTo(bNum);
+        } else {
+          cmp = aStr.compareTo(bStr);
+        }
+        // fallback to recordNo if stockTakeNo considered equal
+        if (cmp == 0) {
+          final ar = a.recordNo ?? 0;
+          final br = b.recordNo ?? 0;
+          cmp = ar.compareTo(br);
+        }
+        // _sortDescending true means largest first -> invert ascending cmp
+        return _sortDescending ? -cmp : cmp;
+      });
+    });
+  }
+
+  int? _extractLastNumber(String s) {
+    final matches = RegExp(r'\d+').allMatches(s);
+    if (matches.isEmpty) return null;
+    final last = matches.last.group(0);
+    if (last == null) return null;
+    return int.tryParse(last);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Stocktake'),
+        actions: [
+          IconButton(
+            icon: Icon(
+              _sortDescending ? Icons.arrow_downward : Icons.arrow_upward,
+            ),
+            tooltip: _sortDescending
+                ? 'Sort: No descending'
+                : 'Sort: No ascending',
+            onPressed: () {
+              setState(() {
+                _sortDescending = !_sortDescending;
+              });
+              _applySort();
+            },
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.search),
+                hintText: 'Search',
+              ),
+              onChanged: (v) => setState(() => _query = v),
+            ),
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _fetch,
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null
+                  ? ListView(
+                      children: [
+                        Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text(_error!),
+                          ),
+                        ),
+                      ],
+                    )
+                  : _filteredItems.isEmpty
+                  ? ListView(
+                      children: const [
+                        Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text('No data'),
+                          ),
+                        ),
+                      ],
+                    )
+                  : ListView.separated(
+                      itemCount: _filteredItems.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (ctx, i) {
+                        final it = _filteredItems[i];
+                        return Container(
+                          color: _isStatusZero(it)
+                              ? Colors.pink.shade100
+                              : null,
+                          child: ListTile(
+                            title: Text(_primaryText(it)),
+                            subtitle: _secondaryText(it).isNotEmpty
+                                ? Text(_secondaryText(it))
+                                : null,
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () {
+                              if (it.id != null && it.id!.isNotEmpty) {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        StocktakeDetailScreen(id: it.id!),
+                                  ),
+                                );
+                              } else {
+                                // fallback to dialog
+                                _openDetailFallback(it);
+                              }
+                            },
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openDetail(InventStockTakeRecording item) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Details'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: item
+                .toJson()
+                .entries
+                .map((e) => Text('${e.key}: ${e.value}'))
+                .toList(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openDetailFallback(InventStockTakeRecording item) {
+    _openDetail(item);
+  }
+}

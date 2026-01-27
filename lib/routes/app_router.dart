@@ -1,20 +1,21 @@
+import '../Screens/stocktake/stocktake_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../presentation/auth/login_screen.dart';
-import '../presentation/dashboard/main_menu_screen.dart';
-import '../presentation/tenant_selection/tenant_selection_screen.dart';
-import '../presentation/warehouse_receipt/wr_list_screen.dart';
-import '../presentation/warehouse_receipt/wr_detail_screen.dart';
-import '../presentation/warehouse_receipt/wr_filter_screen.dart';
-import '../presentation/putaway/putaway_list_screen.dart';
-import '../presentation/picking/picking_list_screen.dart';
-import '../presentation/picking/picking_items_screen.dart';
-import '../presentation/picking/picking_detail_screen.dart';
-import '../presentation/bundle/bundle_list_screen.dart';
-import '../presentation/bundle/bundle_items_screen.dart';
-import '../presentation/bundle/bundle_detail_screen.dart';
-import '../presentation/providers/auth_provider.dart';
+import '../Screens/main/login_screen.dart';
+import '../Screens/main/main_menu_screen.dart';
+import '../Screens/tenant_selection/tenant_selection_screen.dart';
+import '../Screens/warehouse_receipt/wr_list_screen.dart';
+import '../Screens/warehouse_receipt/wr_detail_screen.dart';
+import '../Screens/warehouse_receipt/wr_filter_screen.dart';
+import '../Screens/putaway/putaway_list_screen.dart';
+import '../Screens/picking/picking_list_screen.dart';
+import '../Screens/picking/picking_items_screen.dart';
+import '../Screens/picking/picking_detail_screen.dart';
+import '../Screens/bundle/bundle_list_screen.dart';
+import '../Screens/bundle/bundle_items_screen.dart';
+import '../Screens/bundle/bundle_detail_screen.dart';
+import '../Screens/providers/auth_provider.dart';
 import '../data/models/picking/picking_line.dart';
 import '../data/models/bundle/bundle_line.dart';
 import '../data/models/warehouse_receipt/receipt_order.dart';
@@ -182,6 +183,10 @@ final appRouter = GoRouter(
         );
       },
     ),
+      GoRoute(
+        path: RouteNames.stocktake,
+        builder: (context, state) => const StocktakeScreen(),
+      ),
     // Add other routes as needed...
   ],
 );

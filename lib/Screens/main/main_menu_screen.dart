@@ -56,6 +56,12 @@ class MainMenuScreen extends StatelessWidget {
         color: AppColors.menuColors[6],
         route: '/logout',
       ),
+        MenuItem(
+          id: 99,
+          title: '8. Stocktake',
+          color: Colors.deepPurple,
+          route: RouteNames.stocktake,
+        ),
     ];
   }
 
